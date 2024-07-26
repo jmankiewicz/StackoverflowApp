@@ -1,4 +1,6 @@
-﻿namespace StackoverflowDb.Entities;
+﻿using System.Text.Json.Serialization;
+
+namespace StackoverflowDb.Entities;
 
 public class Question
 {
@@ -7,10 +9,11 @@ public class Question
     public required string Content { get; set; }
     public DateTime PublicationDate { get; set; }
 
-    public required User Author { get; set; }
+    [JsonIgnore]
+    public User Author { get; set; }
     public Guid AuthorId { get; set; }
 
-    public List<Comment> Comments { get; set; } = [];
+    public List<QuestionComment> Comments { get; set; } = [];
     public List<Answer> Answers { get; set; } = [];
     public List<Tag> Tags { get; set; } = [];
 }

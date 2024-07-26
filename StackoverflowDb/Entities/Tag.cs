@@ -6,5 +6,4 @@ public class Tag
     public required string Name { get; set; }
 
     public List<Question> Questions { get; set; } = [];
-    public List<int> QuestionsId { get; set; } = [];
 }

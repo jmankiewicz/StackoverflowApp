@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StackoverflowDb.Entities;
 
@@ -11,9 +12,11 @@ using StackoverflowDb.Entities;
 namespace StackoverflowDb.Migrations
 {
     [DbContext(typeof(StackoverflowDbContext))]
-    partial class StackoverflowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240725131504_SplitCommentsFix")]
+    partial class SplitCommentsFix
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -59,7 +62,7 @@ namespace StackoverflowDb.Migrations
                     b.ToTable("Answers");
                 });
 
-            modelBuilder.Entity("StackoverflowDb.Entities.AnswerComment", b =>
+            modelBuilder.Entity("StackoverflowDb.Entities.AnswerComments", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -123,7 +126,7 @@ namespace StackoverflowDb.Migrations
                     b.ToTable("Questions");
                 });
 
-            modelBuilder.Entity("StackoverflowDb.Entities.QuestionComment", b =>
+            modelBuilder.Entity("StackoverflowDb.Entities.QuestionComments", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -182,41 +185,13 @@ namespace StackoverflowDb.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("QuestionsId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Tags");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "Programming"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "Artificial Intelligence"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "C# Language"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = ".NET"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Name = "Python"
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Name = "JavaScript"
-                        });
                 });
 
             modelBuilder.Entity("StackoverflowDb.Entities.User", b =>
@@ -227,13 +202,12 @@ namespace StackoverflowDb.Migrations
 
                     b.Property<string>("Email")
                         .IsRequired()
-                        .HasMaxLength(32)
-                        .HasColumnType("nvarchar(32)");
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Nickname")
                         .IsRequired()
-                        .HasMaxLength(16)
-                        .HasColumnType("nvarchar(16)");
+                        .HasMaxLength(32)
+                        .HasColumnType("nvarchar(32)");
 
                     b.HasKey("Id");
 
@@ -259,7 +233,7 @@ namespace StackoverflowDb.Migrations
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("StackoverflowDb.Entities.AnswerComment", b =>
+            modelBuilder.Entity("StackoverflowDb.Entities.AnswerComments", b =>
                 {
                     b.HasOne("StackoverflowDb.Entities.Answer", "Answer")
                         .WithMany("Comments")
@@ -289,7 +263,7 @@ namespace StackoverflowDb.Migrations
                     b.Navigation("Author");
                 });
 
-            modelBuilder.Entity("StackoverflowDb.Entities.QuestionComment", b =>
+            modelBuilder.Entity("StackoverflowDb.Entities.QuestionComments", b =>
                 {
                     b.HasOne("StackoverflowDb.Entities.User", "Author")
                         .WithMany("Comments")

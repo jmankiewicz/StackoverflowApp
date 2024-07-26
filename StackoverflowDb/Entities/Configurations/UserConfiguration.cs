@@ -10,7 +10,9 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.HasKey(u => u.Id);
         builder.Property(u => u.Id).IsRequired();
 
-        builder.Property(u => u.Nickname).HasMaxLength(32);
+        builder.Property(u => u.Nickname).HasMaxLength(16);
+
+        builder.Property(u => u.Email).HasMaxLength(32);
 
         builder.HasMany(u => u.Questions)
             .WithOne(q => q.Author)

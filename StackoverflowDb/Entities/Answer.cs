@@ -1,4 +1,6 @@
-﻿namespace StackoverflowDb.Entities;
+﻿using System.Text.Json.Serialization;
+
+namespace StackoverflowDb.Entities;
 
 public class Answer
 {
@@ -13,5 +15,5 @@ public class Answer
     public Question Question { get; set; }
     public int QuestionId { get; set; }
 
-    public List<Comment> Comments { get; set; } = [];
+    public List<AnswerComment> Comments { get; set; } = [];
 }

@@ -12,8 +12,8 @@ using StackoverflowDb.Entities;
 namespace StackoverflowDb.Migrations
 {
     [DbContext(typeof(StackoverflowDbContext))]
-    [Migration("20240723215210_BadRequiredPropertiesFix")]
-    partial class BadRequiredPropertiesFix
+    [Migration("20240725124816_SplitComments")]
+    partial class SplitComments
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -62,7 +62,7 @@ namespace StackoverflowDb.Migrations
                     b.ToTable("Answers");
                 });
 
-            modelBuilder.Entity("StackoverflowDb.Entities.Comment", b =>
+            modelBuilder.Entity("StackoverflowDb.Entities.AnswerComments", b =>
                 {
                     b.Property<int>("Id")
                         .ValueGeneratedOnAdd()
@@ -85,18 +85,13 @@ namespace StackoverflowDb.Migrations
                         .HasColumnType("datetime2")
                         .HasDefaultValueSql("getutcdate()");
 
-                    b.Property<int>("QuestionId")
-                        .HasColumnType("int");
-
                     b.HasKey("Id");
 
                     b.HasIndex("AnswerId");
 
                     b.HasIndex("AuthorId");
 
-                    b.HasIndex("QuestionId");
-
-                    b.ToTable("Comments");
+                    b.ToTable("AnswerComments");
                 });
 
             modelBuilder.Entity("StackoverflowDb.Entities.Question", b =>
@@ -129,6 +124,38 @@ namespace StackoverflowDb.Migrations
                     b.HasIndex("AuthorId");
 
                     b.ToTable("Questions");
+                });
+
+            modelBuilder.Entity("StackoverflowDb.Entities.QuestionComments", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uniqueidentifier");
+
+                    b.Property<string>("Message")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<DateTime>("PublicationDate")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("getutcdate()");
+
+                    b.Property<int>("QuestionId")
+                        .HasColumnType("int");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("QuestionId");
+
+                    b.ToTable("Comments");
                 });
 
             modelBuilder.Entity("StackoverflowDb.Entities.QuestionTag", b =>
@@ -206,31 +233,23 @@ namespace StackoverflowDb.Migrations
                     b.Navigation("Question");
                 });
 
-            modelBuilder.Entity("StackoverflowDb.Entities.Comment", b =>
+            modelBuilder.Entity("StackoverflowDb.Entities.AnswerComments", b =>
                 {
                     b.HasOne("StackoverflowDb.Entities.Answer", "Answer")
                         .WithMany("Comments")
                         .HasForeignKey("AnswerId")
-                        .OnDelete(DeleteBehavior.Cascade)
+                        .OnDelete(DeleteBehavior.NoAction)
                         .IsRequired();
 
                     b.HasOne("StackoverflowDb.Entities.User", "Author")
-                        .WithMany("Comments")
+                        .WithMany()
                         .HasForeignKey("AuthorId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("StackoverflowDb.Entities.Question", "Question")
-                        .WithMany("Comments")
-                        .HasForeignKey("QuestionId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
                     b.Navigation("Answer");
 
                     b.Navigation("Author");
-
-                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("StackoverflowDb.Entities.Question", b =>
@@ -242,6 +261,25 @@ namespace StackoverflowDb.Migrations
                         .IsRequired();
 
                     b.Navigation("Author");
+                });
+
+            modelBuilder.Entity("StackoverflowDb.Entities.QuestionComments", b =>
+                {
+                    b.HasOne("StackoverflowDb.Entities.User", "Author")
+                        .WithMany("Comments")
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("StackoverflowDb.Entities.Question", "Question")
+                        .WithMany("Comments")
+                        .HasForeignKey("QuestionId")
+                        .OnDelete(DeleteBehavior.NoAction)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("Question");
                 });
 
             modelBuilder.Entity("StackoverflowDb.Entities.QuestionTag", b =>

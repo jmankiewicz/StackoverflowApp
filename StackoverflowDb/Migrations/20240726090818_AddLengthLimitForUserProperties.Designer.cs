@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using StackoverflowDb.Entities;
 
@@ -11,9 +12,11 @@ using StackoverflowDb.Entities;
 namespace StackoverflowDb.Migrations
 {
     [DbContext(typeof(StackoverflowDbContext))]
-    partial class StackoverflowDbContextModelSnapshot : ModelSnapshot
+    [Migration("20240726090818_AddLengthLimitForUserProperties")]
+    partial class AddLengthLimitForUserProperties
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -182,41 +185,13 @@ namespace StackoverflowDb.Migrations
                         .IsRequired()
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<string>("QuestionsId")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Tags");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = 1,
-                            Name = "Programming"
-                        },
-                        new
-                        {
-                            Id = 2,
-                            Name = "Artificial Intelligence"
-                        },
-                        new
-                        {
-                            Id = 3,
-                            Name = "C# Language"
-                        },
-                        new
-                        {
-                            Id = 4,
-                            Name = ".NET"
-                        },
-                        new
-                        {
-                            Id = 5,
-                            Name = "Python"
-                        },
-                        new
-                        {
-                            Id = 6,
-                            Name = "JavaScript"
-                        });
                 });
 
             modelBuilder.Entity("StackoverflowDb.Entities.User", b =>

@@ -11,5 +11,5 @@ public class User
 
     public List<Question> Questions { get; set; } = [];
     public List<Answer> Answers { get; set; } = [];
-    public List<Comment> Comments { get; set; } = [];
+    public List<QuestionComment> Comments { get; set; } = [];
 }

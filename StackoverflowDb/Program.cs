@@ -1,11 +1,12 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using StackoverflowDb.Entities;
-using StackoverflowDb.Entities.Inputs;
-using System.ComponentModel;
 using System.Text.Json.Serialization;
+using StackoverflowDb.Entities.Inputs;
+using StackoverflowDb;
 using StackoverflowDb.Entities.DTO;
-using System.Text;
+using Microsoft.AspNetCore.Http.HttpResults;
+using StackoverflowDb.Entities.Errors;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,6 +24,247 @@ builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
+var testUserGuid = "32DEF023-90BF-4109-F8DD-08DCABF66FAA";
+
+app.MapPost("/add-question", async (StackoverflowDbContext db,
+    [AsParameters] CreateQuestion newQuestion) =>
+{
+    var testUser = await StackoverflowOperations.GetTestUserAsync(db, testUserGuid);
+    var question = StackoverflowOperations.CreateQuestion(newQuestion, testUser);
+
+    try
+    {
+        await db.Questions.AddAsync(question);
+        await db.SaveChangesAsync();
+    }
+    catch (Exception e)
+    {
+        var error = new Error
+        {
+            ErrorMessage = e.Message
+        };
+        return Results.Problem(error.ToString());
+    }
+
+    var response = new QuestionDto
+    {
+        Id = question.Id,
+        Title = question.Title,
+        Content = question.Content,
+        PublicationDate = question.PublicationDate,
+        AuthorId = question.Author.Id,
+    };
+
+    return Results.Ok(response);
+});// Add Question
+app.MapPut("/comment-question", async (StackoverflowDbContext db,
+    [AsParameters] CreateComment newComment) =>
+{
+    var question = await db.Questions.FirstOrDefaultAsync(q => q.Id == newComment.Id);
+
+    if (question is null)
+    {
+        return Results.NotFound($"Question with ID = {newComment.Id} does not exist.");
+    }
+    var testUser = await StackoverflowOperations.GetTestUserAsync(db, testUserGuid);
+
+    var comment = StackoverflowOperations.CreateCommentForQuestion(newComment, question, testUser);
+
+    try
+    {
+        await db.QuestionComments.AddAsync(comment);
+        await db.SaveChangesAsync();
+    }
+    catch (Exception e)
+    {
+        var error = new Error
+        {
+            ErrorMessage = e.Message
+        };
+        return Results.Problem(error.ToString());
+    }
+
+    var response = new CommentDto
+    {
+        Message = comment.Message,
+        BelongToId = comment.QuestionId,
+        AuthorId = comment.Author.Id,
+        PublicationDate = comment.PublicationDate,
+    };
+
+    return Results.Ok(response);
+});// Comment Question
+app.MapPost("/answer-question", async (StackoverflowDbContext db,
+    [AsParameters] CreateAnswer newAnswer) =>
+{
+    var testUser = await StackoverflowOperations.GetTestUserAsync(db, testUserGuid);
+
+    var question = await db.Questions
+        .FirstOrDefaultAsync(q => q.Id == newAnswer.QuestionId);
+
+    if (question is null)
+    {
+        return Results.NotFound($"No question with ID number {newAnswer.QuestionId} in database.");
+    }
+
+    var answer = StackoverflowOperations.CreateAnswer(newAnswer, question, testUser);
+
+    try
+    {
+        await db.Answers.AddAsync(answer);
+        await db.SaveChangesAsync();
+    }
+    catch (Exception e)
+    {
+        var error = new Error
+        {
+            ErrorMessage = e.Message
+        };
+        return Results.Problem(error.ToString());
+    }
+
+    var response = new AnswerDto
+    {
+        Message = answer.Message,
+        QuestionId = answer.QuestionId,
+        AuthorId = answer.Author.Id,
+        PublicationDate = answer.PublicationDate,
+    };
+
+    return Results.Ok(response);
+});// Add Answer
+app.MapPut("/comment-answer", async (StackoverflowDbContext db,
+    [AsParameters] CreateComment newComment) =>
+{
+    var answer = await db.Answers.FirstOrDefaultAsync(q => q.Id == newComment.Id);
+
+    if (answer is null)
+    {
+        return Results.NotFound($"Answer with ID = {newComment.Id} does not exist.");
+    }
+    var testUser = await StackoverflowOperations.GetTestUserAsync(db, testUserGuid);
+
+    var comment = StackoverflowOperations.CreateCommentForAnswer(newComment, answer, testUser);
+
+    try
+    {
+        await db.AnswerComments.AddAsync(comment);
+        await db.SaveChangesAsync();
+    }
+    catch (Exception e)
+    {
+        var error = new Error
+        {
+            ErrorMessage = e.Message
+        };
+        return Results.Problem(error.ToString());
+    }
+
+    var response = new CommentDto
+    {
+        Message = comment.Message,
+        BelongToId = comment.AnswerId,
+        AuthorId = comment.Author.Id,
+        PublicationDate = comment.PublicationDate,
+    };
+
+    return Results.Ok(response);
+});// Comment Question
+app.MapGet("/get-questions", 
+    async (StackoverflowDbContext db) =>
+{
+    var questions = await db.Questions
+        .Include(q => q.Tags)
+        .Select(q => new QuestionDto
+        {
+            Id = q.Id,
+            Title = q.Title,
+            Content = q.Content,
+            AuthorId = q.AuthorId,
+            PublicationDate = q.PublicationDate,
+            Tags = StackoverflowOperations.ConvertToTagDto(q.Tags)
+                .ToList(),
+        })
+        .ToListAsync();
+
+    return questions;
+});// Get Questions
+app.MapGet("/get-answers", 
+    async (StackoverflowDbContext db) =>
+{
+    var answers = await db.Answers
+        .Select(a => new AnswerDto
+        {
+            Id = a.Id,
+            Message = a.Message,
+            QuestionId = a.QuestionId,
+            AuthorId = a.AuthorId,
+            PublicationDate = a.PublicationDate
+        })
+        .ToListAsync();
+
+    return answers;
+});// Get Answers
+app.MapPut("/add-tag-to-question", async (StackoverflowDbContext db,
+    [AsParameters] AddTagToQuestion parameters) =>
+{
+    var tag = await db.Tags.FirstOrDefaultAsync(t => t.Id == parameters.TagId);
+    var question = await db.Questions.FirstOrDefaultAsync(q => q.Id == parameters.QuestionId);
+
+    if(tag is null)
+    {
+        return Results.NotFound($"Tag with ID = {parameters.TagId} does not exist.");
+    }
+    if(question is null)
+    {
+        var error = new Error
+        {
+            ErrorMessage = $"Question with ID = {parameters.QuestionId} does not exist."
+        };
+        return Results.NotFound(error);
+    }
+
+    try
+    {
+        question.Tags.Add(tag);
+        await db.SaveChangesAsync();
+    }
+    catch (Exception e)
+    {
+        var error = new Error 
+        { 
+            ErrorMessage = e.Message,
+        };
+        return Results.Problem(error.ToString());
+    }
+
+    var response = db.Questions
+        .Include(q => q.Tags)
+        .Select(q => new QuestionDto
+        {
+            Id = q.Id,
+            Title = q.Title,
+            Content = q.Content,
+            AuthorId = q.AuthorId,
+            PublicationDate = q.PublicationDate,
+            Tags = q.Tags.Select(t => new TagDto { Id = t.Id, Name = t.Name }).ToList(),
+        })
+        .First(q => q.Id == parameters.QuestionId);
+
+    return Results.Ok(response);
+});
+app.MapGet("/get-tags", async (StackoverflowDbContext db) =>
+{
+    var tags = await db.Tags
+        .Select(t => new TagDto
+        {
+            Id = t.Id,
+            Name = t.Name,
+        })
+        .ToListAsync();
+
+    return tags;
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
@@ -33,132 +275,9 @@ if (app.Environment.IsDevelopment())
 
 var scope = builder.Services.BuildServiceProvider().CreateScope();
 var dbContext = scope.ServiceProvider.GetService<StackoverflowDbContext>()!;
-var users = dbContext.Users.ToList();
-
-app.MapPost("/add-user", async(StackoverflowDbContext db, 
-    [AsParameters] AddUser addUser) =>
-{
-    var user = new User
-    {
-        Nickname = addUser.Nickname,
-        Email = addUser.Email,
-    };
-
-    await db.Users.AddAsync(user);
-    await db.SaveChangesAsync();
-
-    return user;
-});
-
-app.MapPost("/ask-a-question", async(StackoverflowDbContext db,
-    [AsParameters] AddQuestion addQuestion) =>
-{
-    // Test user, available for adding questions
-    var author = db.Users
-        .First(u => u.Nickname == "John_Doe");
-
-    var question = new Question
-    {
-        Title = addQuestion.Title,
-        Content = addQuestion.Content,
-        Author = author,
-    };
-
-    await db.Questions.AddAsync(question);
-
-    await db.SaveChangesAsync();
-
-    return new QuestionDto
-    {
-        Id = question.Id,
-        Title = question.Title,
-        Content = question.Content,
-        PublicationDate = question.PublicationDate,
-        Author = author.Nickname,
-    };
-});
-
-app.MapGet("/get-user-details", 
-    async (StackoverflowDbContext db) =>
-{
-
-    var johnDoe = await db.Users
-        .Include(u => u.Questions)
-        .Include(u => u.Answers)
-        .Include(u => u.Comments)
-        .FirstAsync(u => u.Nickname == "John_Doe");
-
-    return new UserDetailsDto
-    {
-        Id = johnDoe.Id,
-        Nickname = johnDoe.Nickname,
-        Email = johnDoe.Email,
-        NumberOfQuestions = johnDoe.Questions.Count,
-        NumberOfAnswers = johnDoe.Answers.Count,
-        NumberOfComments = johnDoe.Comments.Count,
-    };
-});
-
-app.MapGet("/get-user-questions",
-    async (StackoverflowDbContext db) =>
-{
-    var userQuestions = db.Questions
-        .Include(q => q.Author)
-        .Where(q => q.Author.Nickname == "John_Doe")
-        .Select(q => new
-        {
-            q.Author.Nickname,
-            q.Title,
-            q.Content,
-            q.PublicationDate,
-        })
-        .ToList();
-
-    return userQuestions;
-});
-
-app.MapDelete("/delete-question", async (StackoverflowDbContext db, [FromQuery] string title) =>
-{
-    QuestionDto result;
-
-    try
-    {
-        result = await StackoverflowOperations.DeleteQuestionAsync(db, title);
-
-    }
-    catch (Exception ex)
-    {
-        return Results.NotFound(title);
-    }
 
 
-    return Results.Json(result);
-});
 
 app.UseHttpsRedirection();
 
 app.Run();
-
-public class StackoverflowOperations
-{
-    public static async Task<QuestionDto> DeleteQuestionAsync(StackoverflowDbContext db, string title)
-    {
-        var question = await db.Questions.FirstOrDefaultAsync(q => q.Title == title);
-        var result = await db.Questions
-            .Where(q => q.Title == title)
-            .Select(q => new QuestionDto
-            {
-                Id = q.Id,
-                Title = q.Title,
-                Author = q.Author.Nickname,
-                Content = q.Content,
-                PublicationDate = q.PublicationDate,
-            })
-            .FirstOrDefaultAsync();
-
-        db.Questions.Remove(question);
-        db.SaveChanges();
-
-        return result;
-    }
-}
